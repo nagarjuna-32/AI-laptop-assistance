@@ -1,0 +1,10 @@
+speechrecognition
+pyttsx3
+openai
+pywhatkit
+pyautogui
+psutil
+screen-brightness-control
+python-dotenv
+pillow
+pyaudio
