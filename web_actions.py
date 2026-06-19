@@ -1,8 +1,9 @@
 import webbrowser
-import pywhatkit
+import urllib.parse
 
 def google_search(query):
-    webbrowser.open(f"https://www.google.com/search?q={query}")
+    webbrowser.open(f"https://www.google.com/search?q={urllib.parse.quote(query)}")
 
 def youtube_play(query):
-    pywhatkit.playonyt(query)
+    webbrowser.open(f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}")
+
