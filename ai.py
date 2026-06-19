@@ -1,7 +1,13 @@
 from openai import OpenAI
 from config import OPENAI_API_KEY
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize client only if API key is provided to prevent startup crash
+client = None
+if OPENAI_API_KEY:
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+    except Exception as e:
+        print(f"Error initializing OpenAI client: {e}")
 
 SYSTEM_PROMPT = """
 You are Jarvis, an advanced AI voice assistant created for Arjun.
@@ -20,8 +26,10 @@ def ask_ai(prompt: str) -> str:
     chat_history.append({"role": "user", "content": prompt})
 
     try:
+        if not client:
+            raise ValueError("OpenAI API key is missing or empty.")
         response = client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model="gpt-4o-mini",
             messages=chat_history
         )
 
@@ -42,5 +50,6 @@ def ask_ai(prompt: str) -> str:
     })
 
     return reply
+
 
 
