@@ -83,6 +83,34 @@ class TestIntentClassification(unittest.TestCase):
         self.assertEqual(res["needsConfirmation"], True)
         self.assertEqual(res["clarification"], "I didn't catch that clearly. Please repeat.")
 
+    def test_close_app_correct_routing(self):
+        res = detectIntent("close the calculator")
+        self.assertEqual(res["intent"], "CLOSE_APP")
+        self.assertEqual(res["command"], "close")
+        self.assertEqual(res["target"], "calculator")
+
+    def test_time_now_system_info(self):
+        res = detectIntent("what is the time now")
+        self.assertEqual(res["intent"], "SYSTEM_INFO")
+        self.assertEqual(res["command"], "time")
+
+    def test_date_now_system_info(self):
+        res = detectIntent("what is today's date")
+        self.assertEqual(res["intent"], "SYSTEM_INFO")
+        self.assertEqual(res["command"], "date")
+
+    def test_close_study_mode(self):
+        res = detectIntent("close the study mode")
+        self.assertEqual(res["intent"], "CLOSE_APP")
+        self.assertEqual(res["command"], "close_mode")
+        self.assertEqual(res["target"], "study mode")
+
+    def test_close_coding_mode(self):
+        res = detectIntent("close the coding mode")
+        self.assertEqual(res["intent"], "CLOSE_APP")
+        self.assertEqual(res["command"], "close_mode")
+        self.assertEqual(res["target"], "coding mood")
+
 if __name__ == "__main__":
     unittest.main()
 
