@@ -271,8 +271,18 @@ def detectIntent(userText: str) -> dict:
                 result["needsConfirmation"] = False
             return result
 
-    # Open Apps / System Panels
-    open_keywords = ["open", "launch", "start", "run", "open the app", "open app"]
+    # Close Apps
+    close_keywords = ["close", "exit", "quit", "stop", "terminate", "close app"]
+    
+    # Close Mode shortcut check
+    if "close" in cleaned and any(m in cleaned for m in ["study mode", "coding mode", "coding mood", "placement mode", "project mode"]):
+        result["intent"] = "CLOSE_APP"
+        result["command"] = "close_mode"
+        result["target"] = "study mode" if "study" in cleaned else ("coding mood" if "coding" in cleaned else ("placement mode" if "placement" in cleaned else "project mode"))
+        result["confidence"] = 98
+        result["needsConfirmation"] = False
+        return result
+
     apps = [
         "youtube", "chrome", "spotify", "whatsapp", "vs code", "notepad", 
         "calculator", "file explorer", "settings", "cmd", "terminal", 
@@ -280,6 +290,21 @@ def detectIntent(userText: str) -> dict:
         "task manager", "device manager", "services", "registry editor", "powershell",
         "downloads", "documents", "desktop", "screenshots"
     ]
+    matched_close_app = None
+    for app in apps:
+        if app in cleaned:
+            matched_close_app = app
+            break
+            
+    if matched_close_app and (any(cleaned.startswith(kw) for kw in close_keywords) or "close" in cleaned):
+        result["intent"] = "CLOSE_APP"
+        result["command"] = "close"
+        result["target"] = matched_close_app
+        result["confidence"] = 95
+        return result
+
+    # Open Apps / System Panels
+    open_keywords = ["open", "launch", "start", "run", "open the app", "open app"]
     has_open_kw = any(cleaned.startswith(kw) or cleaned.startswith("launch") or cleaned.startswith("start") for kw in open_keywords)
     matched_app = None
     for app in apps:
@@ -307,21 +332,6 @@ def detectIntent(userText: str) -> dict:
         risky_apps = ["gpay", "paypal", "pay", "payment", "bank", "uninstall"]
         if any(ra in cleaned for ra in risky_apps):
             result["needsConfirmation"] = True
-        return result
-
-    # Close Apps
-    close_keywords = ["close", "exit", "quit", "stop", "terminate", "close app"]
-    matched_close_app = None
-    for app in apps:
-        if app in cleaned:
-            matched_close_app = app
-            break
-            
-    if matched_close_app and (any(cleaned.startswith(kw) for kw in close_keywords) or "close" in cleaned):
-        result["intent"] = "CLOSE_APP"
-        result["command"] = "close"
-        result["target"] = matched_close_app
-        result["confidence"] = 95
         return result
 
     # ----------------- PRIORITY 4: WEB / BROWSER SEARCHES -----------------
@@ -371,6 +381,16 @@ def detectIntent(userText: str) -> dict:
         result["confidence"] = 90
         result["needsConfirmation"] = False
         return result
+
+    # ----------------- SYSTEM INFO CHECKS (TIME / DATE) -----------------
+    if any(w in cleaned for w in ["time", "date", "clock"]):
+        if any(w in cleaned for w in ["what", "tell", "current", "today", "now", "get"]):
+            result["intent"] = "SYSTEM_INFO"
+            result["command"] = "time" if "time" in cleaned or "clock" in cleaned else "date"
+            result["target"] = "time" if "time" in cleaned or "clock" in cleaned else "date"
+            result["confidence"] = 95
+            result["needsConfirmation"] = False
+            return result
 
     ai_questions = ["who", "what", "where", "when", "why", "how", "explain", "tell me", "define", "what's", "is"]
     is_question = any(cleaned.startswith(q) for q in ai_questions) or "?" in original_text
