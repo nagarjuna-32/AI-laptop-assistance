@@ -50,7 +50,7 @@ def execute_command(res: dict, raw_data: str):
     
     # Safety Check: OS Access setup confirmation rule
     allowed = db.get_setting("os_access_allowed", "0")
-    if allowed == "0" and intent_name != "ASK_AI":
+    if allowed == "0" and intent_name not in ["ASK_AI", "SYSTEM_INFO"]:
         speak("Please allow system control access in the popup dialog first.")
         return
 
@@ -58,37 +58,26 @@ def execute_command(res: dict, raw_data: str):
     if intent_name == "CUSTOM_COMMAND":
         actions = db.get_custom_command_by_phrase(target)
         if actions:
-            speak(f"{target.title()} activated.")
+            # speak(f"{target.title()} activated.")
             for a in actions:
                 command_queue.put(("manual", a))
 
     # 2. Window operations
     elif intent_name == "WINDOW_ACTION":
         if cmd == "minimize":
-            if system_actions.minimize_active_window():
-                speak("Minimizing active window.")
-            else:
-                speak("Failed to minimize window.")
+            system_actions.minimize_active_window()
         elif cmd == "maximize":
-            if system_actions.maximize_active_window():
-                speak("Maximizing active window.")
-            else:
-                speak("Failed to maximize window.")
+            system_actions.maximize_active_window()
         elif cmd == "switch":
-            if system_actions.switch_window(target):
-                speak(f"Switching focus to {target}.")
-            else:
-                speak(f"Could not find any window matching {target}.")
+            system_actions.switch_window(target)
 
     # 3. Screen operations
     elif intent_name == "SCREEN_ACTION":
         if cmd == "screenshot":
             path = system_actions.take_screenshot()
-            speak("Screenshot captured and saved to your Screenshots folder.")
             db.add_action_log(raw_data, "SCREEN_ACTION", f"Captured screenshot to {path}", "executed")
         elif cmd == "record":
             system_actions.trigger_screen_recording()
-            speak("Screen recording toggled.")
 
     # 4. File actions
     elif intent_name == "FILE_ACTION":
@@ -96,10 +85,10 @@ def execute_command(res: dict, raw_data: str):
         
         if cmd == "create":
             response = manage_file_folder(f"create {target}")
-            speak(response)
+            # speak(response)
         elif cmd in ["delete", "remove"]:
             response = manage_file_folder(f"delete {target}")
-            speak(response)
+            # speak(response)
         elif cmd == "copy":
             path = os.path.join(desktop, target)
             if not os.path.exists(path):
@@ -109,12 +98,10 @@ def execute_command(res: dict, raw_data: str):
                         break
             if os.path.exists(path):
                 system_actions.copy_item(path)
-                speak(f"Copied {os.path.basename(path)} to clipboard.")
-            else:
-                speak(f"Could not find any file named {target} on Desktop.")
+                # speak(f"Copied {os.path.basename(path)} to clipboard.")
         elif cmd == "paste":
             response = system_actions.paste_item(desktop)
-            speak(response)
+            # speak(response)
         elif cmd == "rename":
             parts = target.split(" to ")
             if len(parts) == 2:
@@ -127,11 +114,7 @@ def execute_command(res: dict, raw_data: str):
                             break
                 if os.path.exists(path):
                     response = system_actions.rename_item(path, new_name)
-                    speak(response)
-                else:
-                    speak(f"Could not find {old_name} on Desktop.")
-            else:
-                speak("Please specify old name and new name. For example: rename file to new_name.")
+                    # speak(response)
         elif cmd == "zip":
             path = os.path.join(desktop, target)
             if not os.path.exists(path):
@@ -141,9 +124,7 @@ def execute_command(res: dict, raw_data: str):
                         break
             if os.path.exists(path):
                 response = system_actions.zip_item(path)
-                speak(response)
-            else:
-                speak(f"Could not find {target} on Desktop.")
+                # speak(response)
         elif cmd in ["unzip", "extract"]:
             path = os.path.join(desktop, target)
             if not os.path.exists(path):
@@ -153,9 +134,7 @@ def execute_command(res: dict, raw_data: str):
                         break
             if os.path.exists(path):
                 response = system_actions.extract_zip(path)
-                speak(response)
-            else:
-                speak(f"Could not find zip archive {target} on Desktop.")
+                # speak(response)
 
     # 5. Open Apps / Website Launcher
     elif intent_name == "OPEN_APP":
@@ -168,23 +147,23 @@ def execute_command(res: dict, raw_data: str):
             web_fallback = app_info["web_fallback"]
             if exe_path and os.path.exists(exe_path):
                 subprocess.Popen([exe_path], shell=True)
-                speak(f"Opening {target}.")
+                # speak(f"Opening {target}.")
             elif web_fallback:
-                speak(f"Opening {target} in default browser.")
+                # speak(f"Opening {target} in default browser.")
                 app_finder.open_default_web(web_fallback)
             else:
-                speak(f"Set path or fallback in preferences for {target}.")
+                # speak(f"Set path or fallback in preferences for {target}.")
                 gui.show_page("settings")
                 
         # Fallbacks for popular defaults
         elif "chatgpt" in app_name:
-            speak("Opening ChatGPT in default browser.")
+            # speak("Opening ChatGPT in default browser.")
             app_finder.open_default_web("https://chatgpt.com")
         elif "gemini" in app_name:
-            speak("Opening Gemini in default browser.")
+            # speak("Opening Gemini in default browser.")
             app_finder.open_default_web("https://gemini.google.com")
         elif "youtube" in app_name:
-            speak("Opening YouTube in default browser.")
+            # speak("Opening YouTube in default browser.")
             app_finder.open_default_web("https://youtube.com")
         elif "whatsapp" in app_name:
             local_paths = [
@@ -196,11 +175,11 @@ def execute_command(res: dict, raw_data: str):
             for p in local_paths:
                 if p and os.path.exists(p):
                     subprocess.Popen([p])
-                    speak("Opening WhatsApp.")
+                    # speak("Opening WhatsApp.")
                     launched = True
                     break
             if not launched:
-                speak("App not found. Opening web version.")
+                # speak("App not found. Opening web version.")
                 app_finder.open_default_web("https://web.whatsapp.com")
         elif "spotify" in app_name:
             local_paths = [
@@ -211,79 +190,88 @@ def execute_command(res: dict, raw_data: str):
             for p in local_paths:
                 if p and os.path.exists(p):
                     subprocess.Popen([p])
-                    speak("Opening Spotify.")
+                    # speak("Opening Spotify.")
                     launched = True
                     break
             if not launched:
-                speak("App not found. Opening web version.")
+                # speak("App not found. Opening web version.")
                 app_finder.open_default_web("https://open.spotify.com")
         elif "antigravity" in app_name:
             ide_path = app_finder.find_antigravity_ide()
             if ide_path and os.path.exists(ide_path):
                 subprocess.Popen([ide_path], shell=True)
-                speak("Opening Antigravity IDE.")
+                # speak("Opening Antigravity IDE.")
             else:
-                speak("Please set Antigravity IDE executable path in settings.")
+                # speak("Please set Antigravity IDE executable path in settings.")
                 gui.show_page("settings")
         else:
-            success = open_app(target)
-            if not success:
-                speak("Sorry, I could not recognize that application.")
-            else:
-                speak(f"Opening {target}.")
+            open_app(target)
 
     # 6. Close App
     elif intent_name == "CLOSE_APP":
-        success = close_app(target)
-        if success:
-            speak(f"Closed {target}")
+        if cmd == "close_mode":
+            if target == "study mode":
+                close_app("chatgpt")
+                close_app("youtube")
+                close_app("whatsapp")
+                close_app("chrome")
+                close_app("browser")
+            elif target == "coding mood":
+                close_app("gemini")
+                close_app("chatgpt")
+                close_app("antigravity")
+                close_app("spotify")
+                close_app("chrome")
+                close_app("browser")
+            elif target == "placement mode":
+                close_app("resume")
+                close_app("linkedin")
+                close_app("chatgpt")
+                close_app("interview dashboard")
+                close_app("chrome")
+                close_app("browser")
+            elif target == "project mode":
+                close_app("aiplacement")
+                close_app("portfolio")
+                close_app("full stack projects")
+                close_app("internship tasks")
+                close_app("chrome")
+                close_app("browser")
         else:
-            speak(f"I could not find {target} running.")
+            close_app(target)
             
     # 7. Play YouTube
     elif intent_name == "PLAY_YOUTUBE":
-        speak(f"Playing {target} on YouTube.")
         youtube_play(target)
         
     # 8. Web Search
     elif intent_name == "SEARCH_WEB":
-        speak(f"Searching Google for {target}.")
         app_finder.open_default_web(f"https://www.google.com/search?q={target}")
         
     # 9. System Settings Control
     elif intent_name == "SYSTEM_SETTING":
         if cmd == "delete":
-            response = manage_file_folder(f"delete {target}")
-            speak(response)
+            manage_file_folder(f"delete {target}")
         elif cmd == "create":
-            response = manage_file_folder(f"create {target}")
-            speak(response)
+            manage_file_folder(f"create {target}")
         elif cmd == "theme_dark":
             system_actions.set_dark_mode(True)
-            speak("Dark mode activated.")
         elif cmd == "theme_light":
             system_actions.set_dark_mode(False)
-            speak("Light mode activated.")
         elif cmd == "wifi_on":
             system_actions.set_wifi_state(True)
-            speak("WiFi interface enabled.")
         elif cmd == "wifi_off":
             system_actions.set_wifi_state(False)
-            speak("WiFi interface disabled.")
         elif cmd.startswith("turn "):
             state = "On" if "on" in cmd else "Off"
             try:
-                res_proc = subprocess.run(
+                subprocess.run(
                     ["powershell", "-ExecutionPolicy", "Bypass", "-File", "toggle_bluetooth.ps1", "-BluetoothStatus", state],
                     capture_output=True,
                     text=True
                 )
-                if "turned" in res_proc.stdout:
-                    speak(f"Bluetooth turned {state}")
-                else:
-                    speak("Could not change Bluetooth state.")
             except Exception:
-                speak("Failed to change Bluetooth state.")
+                pass
         elif cmd == "volume up":
             control_volume("up")
         elif cmd == "volume down":
@@ -293,16 +281,12 @@ def execute_command(res: dict, raw_data: str):
         elif cmd == "brightness down":
             control_brightness("down")
         elif cmd == "shutdown":
-            speak("Shutting down the computer in five seconds. Please save your work.")
             shutdown_pc(restart=False)
         elif cmd == "restart":
-            speak("Restarting the computer in five seconds. Please save your work.")
             shutdown_pc(restart=True)
         elif cmd in ["sleep", "suspend"]:
-            speak("Putting the PC to sleep.")
             suspend_pc()
         elif cmd == "lock":
-            speak("Locking screen.")
             lock_screen()
             
     # 10. Messages (Dangerous)
@@ -317,20 +301,15 @@ def execute_command(res: dict, raw_data: str):
             message = message.replace("send message to", "").replace("message to", "").replace("send message", "").replace("saying", "").replace("whatsapp", "").strip()
             if not message:
                 message = "Hello from Chinni"
-            speak(f"Sending WhatsApp message to {number}.")
             send_whatsapp(number, message)
-        else:
-            speak("Please specify a valid phone number in your message request.")
             
     # 11. Calls (Dangerous)
     elif intent_name == "MAKE_CALL":
-        speak("Voice calling is not natively supported on this PC. Opening Phone Link.")
         os.system("start ms-phone:")
         
     # 12. Create Notes
     elif intent_name == "CREATE_NOTE":
         db.add_note("Voice Note", target)
-        speak("I have saved that in my notes database.")
         gui.refresh_notes_ui()
         
     # 13. AI Chatbot
@@ -338,6 +317,16 @@ def execute_command(res: dict, raw_data: str):
         speak("Thinking...")
         answer = ask_ai(target)
         speak(answer)
+        
+    # 14. System Info (Time / Date)
+    elif intent_name == "SYSTEM_INFO":
+        now = datetime.now()
+        if cmd == "time":
+            time_str = now.strftime("%I:%M %p")
+            speak(f"Arjun, the time is {time_str}.")
+        elif cmd == "date":
+            date_str = now.strftime("%B %d, %Y")
+            speak(f"Arjun, today's date is {date_str}.")
 
 # Main orchestrator loop
 def jarvis_loop():
@@ -429,6 +418,8 @@ def jarvis_loop():
                         preview = f"Remember note: {target}"
                     elif intent_name == "ASK_AI":
                         preview = f"Ask AI: {target}"
+                    elif intent_name == "SYSTEM_INFO":
+                        preview = f"Get local system {target}"
                     elif intent_name == "CUSTOM_COMMAND":
                         preview = f"Run custom sequence: {target}"
                     else:
